@@ -122,7 +122,8 @@ namespace ClassGame {
 
         if (ImGui::Button("Game Action")) {
             gameActCounter++;
-            LOG_INFO_TAG("Game action performed, counter: ", "GAME");
+            std::string msg = "Game action performed, counter: " + std::to_string(gameActCounter);
+            LOG_INFO_TAG(msg, "GAME");
         }
         ImGui::SameLine();
         ImGui::Text("counter: %d", gameActCounter);
