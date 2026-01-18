@@ -4,6 +4,7 @@
 
 namespace ClassGame {
 
+// Logger initialization and system feedback
 void Logger::Init(const std::string& filename) {
     if (initialized) return;
     
@@ -21,6 +22,8 @@ void Logger::Init(const std::string& filename) {
     Info("Application initialized", "GAME");
 }
 
+// Define entry pattern - timestamp, tag, and message
+// Outputs to Game Log Window, console, and game_log.txt (in Debug folder or local)
 void Logger::AddEntry(const std::string& level, const std::string& message, const std::string& tag, const ImVec4& color) {
     auto now = std::chrono::system_clock::now();
     auto time_t = std::chrono::system_clock::to_time_t(now);

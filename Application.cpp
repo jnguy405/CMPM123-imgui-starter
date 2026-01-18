@@ -1,3 +1,20 @@
+/*
+ * ASSIGNMENT: W26 CMPM123 - Build a Logging System & adjusted makefile for a Dear IMGUI project
+ * 
+ * CHANGES AND ADDITIONS:
+ * 
+ * Logger.h: Defines Logger singleton class with Meyer's pattern and provides Info(), Warning(), Error() methods with tags and macros.
+ * 
+ * Logger.cpp: Implements logging functionality with timestamp formatting, file output to game_log.txt, and color-coded entries for ImGui display.
+ * 
+ * Application.cpp Usage:
+ * Added "Game Log" window to display Logger entries with color coding and auto-scroll.
+ * Uses LOG_INFO, LOG_WARN, LOG_ERROR macros throughout for testing and game events.
+ * Integrated Logger::GetInstance() calls for clearing logs and retrieving entries for display.
+ * 
+ * CMakeLists.txt Changes:
+ * Added Logger.h and Logger.cpp to source files list for compilation.
+ */
 #include "Application.h"
 #include "Logger.h"
 #include "imgui/imgui.h"
@@ -8,20 +25,24 @@
 
 namespace ClassGame {
     
-    static int gameActCounter = 0;
-    static float floatVal = 0.0f;
-    static ImVec4 clearColor = ImVec4(0.5f, 0.5f, 0.5f, 1.00f);
+    // "Game Control" Window defaults
+    static int gameActCounter = 0;                              // Track player actions by count
+    static float floatVal = 0.0f;                               // Displays designated float val on slider
+    static ImVec4 clearColor = ImVec4(0.5f, 0.5f, 0.5f, 1.00f); // Hex picker default
 
     static bool DemoWin = true;
     static bool AnotherWin = false;
 
+    // Default hex color (clear)
     static float colorR = 115.0f / 255.0f;
     static float colorG = 140.0f / 255.0f;
     static float colorB = 153.0f / 255.0f;
     
     void GameStartUp() 
     {
-        // Test Init Logs
+        Logger::GetInstance().Init();
+
+        // Test log entry types/tags
         LOG_WARN("This is a test warning message");
         LOG_ERROR("This is a test error message");
         LOG_INFO("This is a test info message");
@@ -37,12 +58,14 @@ namespace ClassGame {
 
     void RenderGame() 
     {
+        // Relies on DemoWin boolean - Needs checkbox to view
         ImGui::DockSpaceOverViewport();
         if (DemoWin) {
             ImGui::ShowDemoWindow(&DemoWin);
         }
 
         // Window #1
+        // Given default example window
         ImGui::Begin("ImGui Log Demo");
         ImGui::LogButtons();
 
@@ -55,6 +78,7 @@ namespace ClassGame {
         ImGui::End();
 
         // Window #2
+        // Game log window outputs game updates/logs with timestamps, tags, and messages
         ImGui::Begin("Game Log");
 
         ImGui::Button("Options");
@@ -77,9 +101,11 @@ namespace ClassGame {
         }
         ImGui::Separator();
 
+        // Logger.cpp for function details
         const auto& entries = Logger::GetInstance().GetEntries();
         const auto& colors = Logger::GetInstance().GetColors();
         
+        // Adjust the view/scroll within the window
         ImGui::BeginChild("LogScrollRegion", ImVec2(0, 0), true);
         for (size_t i = 0; i < entries.size(); i++) {
             ImGui::PushStyleColor(ImGuiCol_Text, colors[i]);
@@ -96,6 +122,7 @@ namespace ClassGame {
         ImGui::End();
 
         // Window #3
+        // Game Control window allows custom configurations and game tests output to Game Log
         ImGui::Begin("Game Control");
         ImGui::Text("Main Game Control Panel");
 
