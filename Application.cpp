@@ -194,11 +194,39 @@ namespace ClassGame {
         }
 
         // Window #2 - Game Log with Command Line
-        if (LogWin) { 
+        // Log control buttons
+        if (LogWin) {
             ImGui::Begin("Game Log", &LogWin);
 
+            // Filter state variables (need to be static to persist)
+            static bool showInfo = true;
+            static bool showWarning = true;
+            static bool showError = true;
+
             // Log control buttons
-            ImGui::Button("Options");
+            if (ImGui::Button("Options")) {
+                ImGui::OpenPopup("OptionsPopup");
+            }
+
+            // Options popup with filters
+            if (ImGui::BeginPopup("OptionsPopup")) {
+                ImGui::Text("Filter Options");
+                ImGui::Separator();
+                
+                ImGui::Checkbox("Show Info", &showInfo);
+                ImGui::Checkbox("Show Warnings", &showWarning);
+                ImGui::Checkbox("Show Errors", &showError);
+                
+                ImGui::Separator();
+                
+                if (ImGui::MenuItem("Clear Log")) {
+                    Logger::GetInstance().Clear();
+                }
+                
+                ImGui::EndPopup();
+            }
+
+            // Log control test buttons
             ImGui::SameLine();
             if (ImGui::Button("Clear")) {
                 Logger::GetInstance().Clear();
@@ -217,17 +245,26 @@ namespace ClassGame {
             }
             ImGui::Separator();
 
-            // Display log entries
+            // Display log entries with filtering
             const auto& entries = Logger::GetInstance().GetEntries();
             const auto& colors = Logger::GetInstance().GetColors();
             
-            // Display command line
             const float footer_height = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
             ImGui::BeginChild("LogScrollRegion", ImVec2(0, -footer_height), true);
+            
             for (size_t i = 0; i < entries.size(); i++) {
-                ImGui::PushStyleColor(ImGuiCol_Text, colors[i]);
-                ImGui::Text("%s", entries[i].c_str());
-                ImGui::PopStyleColor();
+                // Determine message type by checking the entry string
+                bool display = true;
+                
+                if (entries[i].find("[INFO]") != std::string::npos && !showInfo) { display = false; }
+                else if (entries[i].find("[WARN]") != std::string::npos && !showWarning) { display = false; }
+                else if (entries[i].find("[ERROR]") != std::string::npos && !showError) { display = false; }
+                
+                if (display) {
+                    ImGui::PushStyleColor(ImGuiCol_Text, colors[i]);
+                    ImGui::Text("%s", entries[i].c_str());
+                    ImGui::PopStyleColor();
+                }
             }
             
             if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
@@ -239,12 +276,12 @@ namespace ClassGame {
             ImGui::Separator();
             bool reclaim_focus = false;
 
-            // Input text box with callback for history navigation
+            // Input text flags
             ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | 
                                                 ImGuiInputTextFlags_EscapeClearsAll | 
                                                 ImGuiInputTextFlags_CallbackHistory;
             
-            // Process input
+            // Command line input field
             if (ImGui::InputText("##CommandInput", InputBuf, IM_ARRAYSIZE(InputBuf), input_text_flags, &TextEditCallbackStub)){
                 char* s = InputBuf;
                 Strtrim(s);
@@ -254,15 +291,16 @@ namespace ClassGame {
                 reclaim_focus = true;
             }
             
-            // Auto-focus on window apparition
+            // Auto-focus on window apparitions
             ImGui::SetItemDefaultFocus();
             if (reclaim_focus)
                 ImGui::SetKeyboardFocusHere(-1);
 
+            // Command Text Label
             ImGui::SameLine();
             ImGui::Text("Command");
 
-            // Help Button
+            // Help button
             ImGui::SameLine();
             if (ImGui::Button("Help")) {
                 LOG_INFO_TAG("Available commands: CLEAR, HELP, INFO, WARN, ERROR, RESET", "CMD");
