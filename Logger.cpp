@@ -89,6 +89,7 @@ void Logger::Error(const std::string& message, const std::string& tag) {
     AddEntry("ERROR", message, tag, ImVec4(1.0f, 0.0f, 0.0f, 1.0f)); // Red
 }
 
+// Specific way to assign or add tags and take priority of the first tag's color
 void Logger::GameEvent(const std::string& message) {
     AddEntry("INFO", message, "GAME", ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); // White with [GAME] tag
 }

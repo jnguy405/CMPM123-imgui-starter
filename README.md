@@ -7,6 +7,7 @@ C++ logger with ImGui. Outputs color-coded logs (INFO/WARN/ERROR) to both `game_
 
 1. [ImGui](https://github.com/ocornut/imgui/tree/docking)
 2. [Meyer's Singleton](https://laristra.github.io/flecsi/src/developer-guide/patterns/meyers_singleton.html)
+3. [ImGui Console Usage](https://github.com/rmxbalanque/imgui-console/blob/master/example/src/example_main.cpp)
 
 ---
 ## Approach & Questions
