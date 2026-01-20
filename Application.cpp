@@ -32,6 +32,7 @@ namespace ClassGame {
     static ImVec4 clearColor = ImVec4(0.5f, 0.5f, 0.5f, 1.00f); // Hex picker default
 
     static bool DemoWin = true;
+    static bool LogWin = true;
     static bool AnotherWin = false;
 
     // Default hex color (clear)
@@ -169,6 +170,7 @@ namespace ClassGame {
         gameActCounter = 0;
         floatVal = 0.0f;
         DemoWin = true;
+        LogWin = true;
         AnotherWin = false;
     }
 
@@ -176,103 +178,112 @@ namespace ClassGame {
         
         // Relies on DemoWin boolean - Needs checkbox to view
         ImGui::DockSpaceOverViewport();
-        if (DemoWin) {
-            ImGui::ShowDemoWindow(&DemoWin);
-        }
 
         // Window #1
         // Given default example window
-        ImGui::Begin("ImGui Log Demo");
-        ImGui::LogButtons();
+        if (DemoWin) { 
+            ImGui::Begin("ImGui Log Demo", &DemoWin);
+            ImGui::LogButtons();
 
-        if (ImGui::Button("Copy \"Hello, world!\" to clipboard")){
-            ImGui::LogToClipboard();
-            ImGui::LogText("Hello, world!");
-            ImGui::LogFinish();
+            if (ImGui::Button("Copy \"Hello, world!\" to clipboard")){
+                ImGui::LogToClipboard();
+                ImGui::LogText("Hello, world!");
+                ImGui::LogFinish();
+            }
+            ImGui::End();
         }
-        ImGui::End();
 
         // Window #2 - Game Log with Command Line
-        ImGui::Begin("Game Log");
+        if (LogWin) { 
+            ImGui::Begin("Game Log", &LogWin);
 
-        // Log control buttons
-        ImGui::Button("Options");
-        ImGui::SameLine();
-        if (ImGui::Button("Clear")) {
-            Logger::GetInstance().Clear();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Test Info")) {
-            LOG_INFO("This is a test info message");
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Test Warning")) {
-            LOG_WARN("This is a test warning message");
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Test Error")) {
-            LOG_ERROR("This is a test error message");
-        }
-        ImGui::Separator();
+            // Log control buttons
+            ImGui::Button("Options");
+            ImGui::SameLine();
+            if (ImGui::Button("Clear")) {
+                Logger::GetInstance().Clear();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Test Info")) {
+                LOG_INFO("This is a test info message");
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Test Warning")) {
+                LOG_WARN("This is a test warning message");
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Test Error")) {
+                LOG_ERROR("This is a test error message");
+            }
+            ImGui::Separator();
 
-        // Display log entries
-        const auto& entries = Logger::GetInstance().GetEntries();
-        const auto& colors = Logger::GetInstance().GetColors();
-        
-        // Display command line
-        const float footer_height = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-        ImGui::BeginChild("LogScrollRegion", ImVec2(0, -footer_height), true);
-        for (size_t i = 0; i < entries.size(); i++) {
-            ImGui::PushStyleColor(ImGuiCol_Text, colors[i]);
-            ImGui::Text("%s", entries[i].c_str());
-            ImGui::PopStyleColor();
-        }
-        
-        if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
-            ImGui::SetScrollHereY(1.0f);
-        }
-        ImGui::EndChild();
+            // Display log entries
+            const auto& entries = Logger::GetInstance().GetEntries();
+            const auto& colors = Logger::GetInstance().GetColors();
+            
+            // Display command line
+            const float footer_height = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+            ImGui::BeginChild("LogScrollRegion", ImVec2(0, -footer_height), true);
+            for (size_t i = 0; i < entries.size(); i++) {
+                ImGui::PushStyleColor(ImGuiCol_Text, colors[i]);
+                ImGui::Text("%s", entries[i].c_str());
+                ImGui::PopStyleColor();
+            }
+            
+            if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+                ImGui::SetScrollHereY(1.0f);
+            }
+            ImGui::EndChild();
 
-        // Command line input
-        ImGui::Separator();
-        bool reclaim_focus = false;
+            // Command line input
+            ImGui::Separator();
+            bool reclaim_focus = false;
 
-        ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | 
-                                               ImGuiInputTextFlags_EscapeClearsAll | 
-                                               ImGuiInputTextFlags_CallbackHistory;
-        
-        if (ImGui::InputText("##CommandInput", InputBuf, IM_ARRAYSIZE(InputBuf), input_text_flags, &TextEditCallbackStub)){
-            char* s = InputBuf;
-            Strtrim(s);
-            if (s[0])
-                ExecCommand(s);
-            strcpy_s(s, IM_ARRAYSIZE(InputBuf), "");
-            reclaim_focus = true;
+            // Input text box with callback for history navigation
+            ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | 
+                                                ImGuiInputTextFlags_EscapeClearsAll | 
+                                                ImGuiInputTextFlags_CallbackHistory;
+            
+            // Process input
+            if (ImGui::InputText("##CommandInput", InputBuf, IM_ARRAYSIZE(InputBuf), input_text_flags, &TextEditCallbackStub)){
+                char* s = InputBuf;
+                Strtrim(s);
+                if (s[0])
+                    ExecCommand(s);
+                strcpy_s(s, IM_ARRAYSIZE(InputBuf), "");
+                reclaim_focus = true;
+            }
+            
+            // Auto-focus on window apparition
+            ImGui::SetItemDefaultFocus();
+            if (reclaim_focus)
+                ImGui::SetKeyboardFocusHere(-1);
+
+            ImGui::SameLine();
+            ImGui::Text("Command");
+
+            // Help Button
+            ImGui::SameLine();
+            if (ImGui::Button("Help")) {
+                LOG_INFO_TAG("Available commands: CLEAR, HELP, INFO, WARN, ERROR, RESET", "CMD");
+            }
+
+            ImGui::End();
         }
-        
-        ImGui::SetItemDefaultFocus();
-        if (reclaim_focus)
-            ImGui::SetKeyboardFocusHere(-1);
-
-        ImGui::SameLine();
-        ImGui::Text("Command");
-
-        // Help Button
-        ImGui::SameLine();
-        if (ImGui::Button("Help")) {
-            LOG_INFO_TAG("Available commands: CLEAR, HELP, INFO, WARN, ERROR, RESET", "CMD");
-        }
-        
-        ImGui::End();
 
         // Window #3
         // Game Control window allows custom configurations and game tests output to Game Log
         ImGui::Begin("Game Control");
         ImGui::Text("Main Game Control Panel");
 
+        // Control window options
         ImGui::Checkbox("##DemoCheck", &DemoWin);
         ImGui::SameLine();
         ImGui::Text("Demo Window");
+
+        ImGui::Checkbox("##LogCheck", &LogWin);
+        ImGui::SameLine();
+        ImGui::Text("Log Window");
 
         ImGui::Checkbox("##AnotherCheck", &AnotherWin);
         ImGui::SameLine();
@@ -302,6 +313,7 @@ namespace ClassGame {
         ImGui::Separator();
         ImGui::Text("Logging Test Buttons:");
 
+        // Test log buttons
         if (ImGui::Button("Log Game Event")) {
             LOG_INFO_TAG("Manual game event from control panel", "GAME");
         }
@@ -315,6 +327,13 @@ namespace ClassGame {
         }
 
         ImGui::End();
+
+        // Window #4 - Another Window
+        if (AnotherWin) { 
+            ImGui::Begin("Another Window", &AnotherWin);
+            ImGui::Text("Hello from another window!");
+            ImGui::End();
+        }
     }
 
     void EndOfTurn() 
