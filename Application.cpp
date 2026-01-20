@@ -219,7 +219,7 @@ namespace ClassGame {
         const auto& entries = Logger::GetInstance().GetEntries();
         const auto& colors = Logger::GetInstance().GetColors();
         
-        // Display command linen
+        // Display command line
         const float footer_height = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
         ImGui::BeginChild("LogScrollRegion", ImVec2(0, -footer_height), true);
         for (size_t i = 0; i < entries.size(); i++) {
@@ -253,6 +253,9 @@ namespace ClassGame {
         ImGui::SetItemDefaultFocus();
         if (reclaim_focus)
             ImGui::SetKeyboardFocusHere(-1);
+
+        ImGui::SameLine();
+        ImGui::Text("Command");
 
         ImGui::End();
 
