@@ -257,6 +257,12 @@ namespace ClassGame {
         ImGui::SameLine();
         ImGui::Text("Command");
 
+        // Help Button
+        ImGui::SameLine();
+        if (ImGui::Button("Help")) {
+            LOG_INFO_TAG("Available commands: CLEAR, HELP, INFO, WARN, ERROR, RESET", "CMD");
+        }
+        
         ImGui::End();
 
         // Window #3
