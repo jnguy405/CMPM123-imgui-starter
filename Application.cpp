@@ -18,6 +18,7 @@
  */
 #include "Application.h"
 #include "Logger.h"
+#include "Command.h"
 #include "imgui/imgui.h"
 #include <string>
 #include <vector>
@@ -42,115 +43,9 @@ namespace ClassGame {
     
     // Command line input buffer and history
     static char InputBuf[256] = "";
-    static ImVector<char*> CommandHistory;
-    static int HistoryPos = -1;
     
-    // Helper functions for command line
-    
-    // Case-insensitive string compare
-    static int Stricmp(const char* s1, const char* s2) { 
-        int d; 
-        while ((d = toupper(*s2) - toupper(*s1)) == 0 && *s1) { 
-            s1++; 
-            s2++; 
-        } 
-        return d; 
-    }
-    
-    // Case-insensitive string compare with length limit
-    static int Strnicmp(const char* s1, const char* s2, int n) { 
-        int d = 0; 
-        while (n > 0 && (d = toupper(*s2) - toupper(*s1)) == 0 && *s1) { 
-            s1++; 
-            s2++; 
-            n--; 
-        } 
-        return d; 
-    }
-    
-    // Duplicate string
-    static char* Strdup(const char* s) { 
-        size_t len = strlen(s) + 1; 
-        void* buf = malloc(len); 
-        return (char*)memcpy(buf, (const void*)s, len); 
-    }
-    
-    // Trim trailing spaces
-    static void Strtrim(char* s) { 
-        char* str_end = s + strlen(s); 
-        while (str_end > s && str_end[-1] == ' ') 
-            str_end--; 
-        *str_end = 0; 
-    }
-
-    // Execute command from command line
-    static void ExecCommand(const char* command_line) {
-        LOG_INFO_TAG(std::string("Command: ") + command_line, "CMD");
-        
-        // Add to history
-        HistoryPos = -1;
-        for (int i = CommandHistory.Size - 1; i >= 0; i--)
-            if (Stricmp(CommandHistory[i], command_line) == 0)
-            {
-                free(CommandHistory[i]);
-                CommandHistory.erase(CommandHistory.begin() + i);
-                break;
-            }
-        CommandHistory.push_back(Strdup(command_line));
-        
-        // Process commands
-        // Note for later: expand with more game-specific commands as needed
-        if (Stricmp(command_line, "CLEAR") == 0) {
-            Logger::GetInstance().Clear();
-            LOG_INFO_TAG("Log cleared via command", "CMD");
-        }
-        else if (Stricmp(command_line, "HELP") == 0) {
-            LOG_INFO_TAG("Available commands: CLEAR, HELP, INFO, WARN, ERROR, RESET", "CMD");
-        }
-        else if (Stricmp(command_line, "RESET") == 0) {
-            gameActCounter = 0;
-            LOG_INFO_TAG("Game counter reset", "CMD");
-        }
-        else if (Stricmp(command_line, "INFO") == 0) {
-            LOG_INFO("Test info message from command line");
-        }
-        else if (Stricmp(command_line, "WARN") == 0) {
-            LOG_WARN("Test warning message from command line");
-        }
-        else if (Stricmp(command_line, "ERROR") == 0) {
-            LOG_ERROR("Test error message from command line");
-        }
-        else {
-            LOG_ERROR_TAG(std::string("Unknown command: '") + command_line + "'", "CMD");
-        }
-    }
-
-    // Callback for input text
-    // Handles command 'history navigation'
-    static int TextEditCallbackStub(ImGuiInputTextCallbackData* data) {
-        switch (data->EventFlag) {
-        case ImGuiInputTextFlags_CallbackHistory: {
-                const int prev_history_pos = HistoryPos;
-                if (data->EventKey == ImGuiKey_UpArrow) {
-                    if (HistoryPos == -1)
-                        HistoryPos = CommandHistory.Size - 1;
-                    else if (HistoryPos > 0)
-                        HistoryPos--;
-                }
-                else if (data->EventKey == ImGuiKey_DownArrow) {
-                    if (HistoryPos != -1)
-                        if (++HistoryPos >= CommandHistory.Size)
-                            HistoryPos = -1;
-                }
-                
-                if (prev_history_pos != HistoryPos) {
-                    const char* history_str = (HistoryPos >= 0) ? CommandHistory[HistoryPos] : "";
-                    data->DeleteChars(0, data->BufTextLen);
-                    data->InsertChars(0, history_str);
-                }
-            }
-        }
-        return 0;
+    void ResetGameCounter() {
+        gameActCounter = 0;
     }
 
     void GameStartUp() {
@@ -178,9 +73,10 @@ namespace ClassGame {
         
         // Relies on DemoWin boolean - Needs checkbox to view
         ImGui::DockSpaceOverViewport();
+        ImGui::ShowDemoWindow();
 
-        // Window #1
-        // Given default example window
+
+        // Window #1 - ImGui Log Demo
         if (DemoWin) { 
             ImGui::Begin("ImGui Log Demo", &DemoWin);
             ImGui::LogButtons();
@@ -194,21 +90,19 @@ namespace ClassGame {
         }
 
         // Window #2 - Game Log with Command Line
-        // Log control buttons
         if (LogWin) {
             ImGui::Begin("Game Log", &LogWin);
 
-            // Filter state variables (need to be static to persist)
+            // Filter state variables
             static bool showInfo = true;
             static bool showWarning = true;
             static bool showError = true;
 
-            // Log control buttons
+            // Options button and popup
             if (ImGui::Button("Options")) {
                 ImGui::OpenPopup("OptionsPopup");
             }
 
-            // Options popup with filters
             if (ImGui::BeginPopup("OptionsPopup")) {
                 ImGui::Text("Filter Options");
                 ImGui::Separator();
@@ -226,7 +120,7 @@ namespace ClassGame {
                 ImGui::EndPopup();
             }
 
-            // Log control test buttons
+            // Test buttons
             ImGui::SameLine();
             if (ImGui::Button("Clear")) {
                 Logger::GetInstance().Clear();
@@ -253,12 +147,17 @@ namespace ClassGame {
             ImGui::BeginChild("LogScrollRegion", ImVec2(0, -footer_height), true);
             
             for (size_t i = 0; i < entries.size(); i++) {
-                // Determine message type by checking the entry string
                 bool display = true;
                 
-                if (entries[i].find("[INFO]") != std::string::npos && !showInfo) { display = false; }
-                else if (entries[i].find("[WARN]") != std::string::npos && !showWarning) { display = false; }
-                else if (entries[i].find("[ERROR]") != std::string::npos && !showError) { display = false; }
+                if (entries[i].find("[INFO]") != std::string::npos && !showInfo) { 
+                    display = false; 
+                }
+                else if (entries[i].find("[WARN]") != std::string::npos && !showWarning) { 
+                    display = false; 
+                }
+                else if (entries[i].find("[ERROR]") != std::string::npos && !showError) { 
+                    display = false; 
+                }
                 
                 if (display) {
                     ImGui::PushStyleColor(ImGuiCol_Text, colors[i]);
@@ -276,31 +175,27 @@ namespace ClassGame {
             ImGui::Separator();
             bool reclaim_focus = false;
 
-            // Input text flags
             ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | 
-                                                ImGuiInputTextFlags_EscapeClearsAll | 
-                                                ImGuiInputTextFlags_CallbackHistory;
+                                                   ImGuiInputTextFlags_EscapeClearsAll | 
+                                                   ImGuiInputTextFlags_CallbackHistory;
             
-            // Command line input field
-            if (ImGui::InputText("##CommandInput", InputBuf, IM_ARRAYSIZE(InputBuf), input_text_flags, &TextEditCallbackStub)){
+            if (ImGui::InputText("##CommandInput", InputBuf, IM_ARRAYSIZE(InputBuf), 
+                                input_text_flags, &Command::TextEditCallbackStub)) {
                 char* s = InputBuf;
-                Strtrim(s);
+                Command::Strtrim(s);
                 if (s[0])
-                    ExecCommand(s);
+                    Command::ExecCommand(s);
                 strcpy_s(s, IM_ARRAYSIZE(InputBuf), "");
                 reclaim_focus = true;
             }
             
-            // Auto-focus on window apparitions
             ImGui::SetItemDefaultFocus();
             if (reclaim_focus)
                 ImGui::SetKeyboardFocusHere(-1);
 
-            // Command Text Label
             ImGui::SameLine();
             ImGui::Text("Command");
 
-            // Help button
             ImGui::SameLine();
             if (ImGui::Button("Help")) {
                 LOG_INFO_TAG("Available commands: CLEAR, HELP, INFO, WARN, ERROR, RESET", "CMD");
@@ -309,12 +204,10 @@ namespace ClassGame {
             ImGui::End();
         }
 
-        // Window #3
-        // Game Control window allows custom configurations and game tests output to Game Log
+        // Window #3 - Game Control
         ImGui::Begin("Game Control");
         ImGui::Text("Main Game Control Panel");
 
-        // Control window options
         ImGui::Checkbox("##DemoCheck", &DemoWin);
         ImGui::SameLine();
         ImGui::Text("Demo Window");
@@ -351,7 +244,6 @@ namespace ClassGame {
         ImGui::Separator();
         ImGui::Text("Logging Test Buttons:");
 
-        // Test log buttons
         if (ImGui::Button("Log Game Event")) {
             LOG_INFO_TAG("Manual game event from control panel", "GAME");
         }
@@ -374,8 +266,7 @@ namespace ClassGame {
         }
     }
 
-    void EndOfTurn() 
-    {
+    void EndOfTurn() {
         gameActCounter++;
         LOG_INFO_TAG("End of turn #" + std::to_string(gameActCounter), "GAME");
     }
